@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Cartelera TMDB</title>
+  <link rel="stylesheet" href="style.css">
+
+</head>
+<body>
+  <h1>Cartelera de Películas</h1>
+
+  <div class="filtros">
+    <input type="text" id="buscar" placeholder="Buscar por título...">
+
+    <label>Fecha inicio:<input type="date" id="fechaDesde">
+    </label>
+
+    <label>Fecha fin:<input type="date" id="fechaHasta">
+    </label>
+
+    <select id="genero">
+      <option value="todos">Todos los géneros</option>
+    </select>
+
+    <select id="ordenar">
+      <option value="">Ordenar</option>
+      <option value="az">A-Z</option>
+      <option value="za">Z-A</option>
+    </select>
+
+    <select id="cantidad">
+      <option value="4" selected>4</option>
+      <option value="5">5</option>
+    </select>
+  </div>
+
+  <div id="cartelera" class="cartelera"></div>
+  <div class="paginacion">
+    <button id="anterior">Anterior</button>
+    <span id="paginaActual">1</span>
+    <button id="siguiente">Siguiente</button>
+  </div>
+
+  <script type="module" src="script.js"></script>
+</body>
+</html>
+
+
