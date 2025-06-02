@@ -1,12 +1,12 @@
 //Constantes para consumo de la API
 const API_KEY = 'd54db03074c8f0f6a36490e2819756ec';
-const BASE_URL = 'https://api.themoviedb.org/3/movie/now_playing';
+const BASE_URL = 'https://api.themoviedb.org/3/discover/movie';
 const GENEROS_URL = 'https://api.themoviedb.org/3/genre/movie/list';
 
 let pagina = 1;
-let carteleraPeliculas = [];
 let cantidadMostrar = 4;
 let generosMap = {};
+let totalPaginas = 1;
 
 const cartelera = document.getElementById("cartelera");
 const paginaActual = document.getElementById("paginaActual");
@@ -23,6 +23,10 @@ const fechaDesdeInput = document.getElementById("fechaDesde");
 const fechaHastaInput = document.getElementById("fechaHasta");
 const cantidadSelect = document.getElementById("cantidad");
 
+// Cargar datos iniciales
+cargarGeneros();
+cargarPeliculas();
+
 //Funcion que obtiene los generos de las peliculas
 async function cargarGeneros() {
   const url = `${GENEROS_URL}?api_key=${API_KEY}&language=es-ES`;
@@ -37,16 +41,32 @@ async function cargarGeneros() {
   });
 }
 
-//Funcion para obtener peliculas en cartelera
+//Funcion para obtener peliculas desde la API
 async function cargarPeliculas() {
-  mostrarSpinner(true); // Activamos spinner mientras se obtienen los datos
-  const url = `${BASE_URL}?api_key=${API_KEY}&language=es-ES&page=${pagina}`;
+  mostrarSpinner(true);
+
+  //Realizamos la definicion de los filtros que se enviaran para el consumo de la API
+  const genero = generoSelect.value !== "todos" ? `&with_genres=${generoSelect.value}` : '';
+  const ordenar = ordenarSelect.value === "az" ? '&sort_by=original_title.asc' : ordenarSelect.value === "za" ? '&sort_by=original_title.desc' : '';
+  const fechaDesde = fechaDesdeInput.value ? `&primary_release_date.gte=${fechaDesdeInput.value}` : '';
+  const fechaHasta = fechaHastaInput.value ? `&primary_release_date.lte=${fechaHastaInput.value}` : '';
+
+  const url = `${BASE_URL}?api_key=${API_KEY}&language=es-ES&page=${pagina}${genero}${ordenar}${fechaDesde}${fechaHasta}`; // Consumimos la API con los valores seleccionados
+
   const respuesta = await fetch(url);
   const datos = await respuesta.json();
-  carteleraPeliculas = datos.results; // Guardamos el resultado
-  aplicarFiltros(); // Ejectumos funcion para aplicar los filtros seleccionados
-  paginaActual.textContent = pagina;
-  mostrarSpinner(false); // Ocultamos spinner
+  let peliculas = datos.results; // Guardamos el resultado en una variable local
+  totalPaginas = datos.total_pages; // Obtenemos el total de paginas
+
+  // Filtrar por texto (search solo disponible con /search/movie)
+  const busqueda = busquedaInput.value.toLowerCase();
+  if (busqueda) {
+    peliculas = peliculas.filter(p => p.title.toLowerCase().includes(busqueda));
+  }
+
+  mostrarPeliculas(peliculas);
+  paginaActual.textContent = `${pagina} / ${totalPaginas}`;
+  mostrarSpinner(false);
 }
 
 //Funcion donde declaramos los datos que se mostraran
@@ -67,7 +87,6 @@ function mostrarPeliculas(peliculas) {
         <p><strong>Popularidad:</strong> ${pelicula.popularity}</p>
         <p><strong>Votos:</strong> ${pelicula.vote_count}</p>
         <p><strong>Promedio de votos:</strong> ${pelicula.vote_average}</p>
-        
         <p><strong>Sinopsis:</strong></p>
         <p class="descripcion">
           <span class="corta">${descripcionCorta}</span>
@@ -83,40 +102,6 @@ function mostrarSpinner(estado) {
   spinner.classList.toggle("visible", estado);
 }
 
-//Funcion para realizar los filtros de busqueda de peliculas
-function aplicarFiltros() {
-  mostrarSpinner(true);
-  let filtradas = [...carteleraPeliculas];
-
-  const busqueda = busquedaInput.value.toLowerCase();
-  if (busqueda) {
-    filtradas = filtradas.filter(p => p.title.toLowerCase().includes(busqueda));
-  }
-
-  const desde = fechaDesdeInput.value;
-  const hasta = fechaHastaInput.value;
-  if (desde) {
-    filtradas = filtradas.filter(p => p.release_date >= desde);
-  }
-  if (hasta) {
-    filtradas = filtradas.filter(p => p.release_date <= hasta);
-  }
-
-  const genero = generoSelect.value;
-  if (genero && genero !== "todos") {
-    filtradas = filtradas.filter(p => p.genre_ids.includes(parseInt(genero)));
-  }
-
-  if (ordenarSelect.value === "az") {
-    filtradas.sort((a, b) => a.title.localeCompare(b.title));
-  } else if (ordenarSelect.value === "za") {
-    filtradas.sort((a, b) => b.title.localeCompare(a.title));
-  }
-
-  mostrarPeliculas(filtradas);
-  mostrarSpinner(false);
-}
-
 anterior.addEventListener("click", () => {
   if (pagina > 1) {
     pagina--;
@@ -125,18 +110,20 @@ anterior.addEventListener("click", () => {
 });
 
 siguiente.addEventListener("click", () => {
-  pagina++;
-  cargarPeliculas();
+  if (pagina < totalPaginas) {
+    pagina++;
+    cargarPeliculas();
+  }
 });
 
 [busquedaInput, generoSelect, ordenarSelect, fechaDesdeInput, fechaHastaInput].forEach(input => {
-  input.addEventListener("input", aplicarFiltros);
+  input.addEventListener("input", () => {
+    pagina = 1;
+    cargarPeliculas();
+  });
 });
 
 cantidadSelect.addEventListener("change", () => {
   cantidadMostrar = parseInt(cantidadSelect.value);
-  aplicarFiltros();
+  cargarPeliculas();
 });
-
-cargarGeneros();
-cargarPeliculas();
